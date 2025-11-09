@@ -1,0 +1,643 @@
+import React, { useState } from 'react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
+import {
+  Bell,
+  LayoutDashboard,
+  Map,
+  Thermometer,
+  Brain,
+  ShieldAlert,
+  Droplet,
+  User,
+  Power,
+  Sun,
+  Wind,
+  Tractor,
+  Combine,
+  Sprout
+} from 'lucide-react';
+
+// --- Mock Data based on your project report ---
+// This simulates the data coming from your backend microservices
+
+// Simulates data from the "AI Recommendation Service"
+const mockRecommendations = [
+  {
+    id: 1,
+    plot: 'Plot B (Corn)',
+    title: 'Irrigation Needed',
+    message: 'Soil moisture is at 22%. Recommend irrigating for 20 minutes at 8:00 PM.',
+    type: 'irrigation',
+  },
+  {
+    id: 2,
+    plot: 'Plot A (Soybeans)',
+    title: 'Nutrient Deficiency',
+    message: 'NPK sensor detects low Nitrogen. Recommend applying N-rich fertilizer.',
+    type: 'nutrient',
+  },
+  {
+    id: 3,
+    plot: 'Plot C (Wheat)',
+    title: 'Optimal Conditions',
+    message: 'All metrics are within the ideal range. No action needed.',
+    type: 'info',
+  },
+];
+
+// Simulates data for the "Historical Data Charts"
+const mockSensorHistory = {
+  'Plot A (Soybeans)': [
+    { time: '00:00', moisture: 35, temp: 18, npk: 120 },
+    { time: '04:00', moisture: 32, temp: 17, npk: 118 },
+    { time: '08:00', moisture: 30, temp: 19, npk: 115 },
+    { time: '12:00', moisture: 28, temp: 24, npk: 112 },
+    { time: '16:00', moisture: 25, temp: 26, npk: 110 },
+    { time: '20:00', moisture: 22, temp: 21, npk: 108 },
+  ],
+  'Plot B (Corn)': [
+    { time: '00:00', moisture: 55, temp: 19, npk: 200 },
+    { time: '04:00', moisture: 52, temp: 18, npk: 198 },
+    { time: '08:00', moisture: 50, temp: 20, npk: 195 },
+    { time: '12:00', moisture: 48, temp: 25, npk: 192 },
+    { time: '16:00', moisture: 45, temp: 27, npk: 190 },
+    { time: '20:00', moisture: 42, temp: 22, npk: 188 },
+  ],
+  'Plot C (Wheat)': [
+    { time: '00:00', moisture: 65, temp: 17, npk: 150 },
+    { time: '04:00', moisture: 62, temp: 16, npk: 148 },
+    { time: '08:00', moisture: 60, temp: 18, npk: 145 },
+    { time: '12:00', moisture: 58, temp: 23, npk: 142 },
+    { time: '16:00', moisture: 55, temp: 25, npk: 140 },
+    { time: '20:00', moisture: 52, temp: 21, npk: 138 },
+  ],
+};
+
+// Simulates data for the "Farm Plot Heatmaps"
+const mockPlots = [
+  { id: 'A', name: 'Plot A (Soybeans)', moisture: 0.22, temp: 26, crop: 'Soybeans' }, // Critical
+  { id: 'B', name: 'Plot B (Corn)', moisture: 0.42, temp: 27, crop: 'Corn' }, // Warning
+  { id: 'C', name: 'Plot C (Wheat)', moisture: 0.65, temp: 25, crop: 'Wheat' }, // Good
+  { id: 'D', name: 'Plot D (Fallow)', moisture: 0.55, temp: 25, crop: 'Fallow' }, // Good
+];
+
+// Simulates data from the "External Weather API"
+const mockWeather = {
+  current: { temp: 24, condition: 'Sunny', icon: <Sun /> },
+  forecast: [
+    { day: 'Mon', temp: 26, rain: 0, icon: <Sun /> },
+    { day: 'Tue', temp: 25, rain: 10, icon: <Sun /> }, // Using Sun as a placeholder, would be Cloud
+    { day: 'Wed', temp: 22, rain: 80, icon: <Droplet /> }, // Placeholder, would beCloudRain
+  ],
+};
+
+// Simulates "Critical Alerts"
+const mockAlerts = [
+  {
+    id: 1,
+    title: 'Frost Warning',
+    plot: 'All Plots',
+    time: '2:30 AM',
+    message: 'Temperature expected to drop below 0°C tonight.',
+  },
+  {
+    id: 2,
+    title: 'Sensor Offline',
+    plot: 'Plot C Sensor-002',
+    time: '1:15 PM',
+    message: 'Sensor has not reported data in 60 minutes.',
+  },
+];
+
+// Simulates user roles from your "Functional Requirements"
+const mockUsers = {
+  'farmer@farmintel.com': {
+    name: 'David Lee',
+    role: 'Farmer',
+    email: 'farmer@farmintel.com',
+  },
+  'agronomist@farmintel.com': {
+    name: 'Meena Kumari',
+    role: 'Agronomist',
+    email: 'agronomist@farmintel.com',
+  },
+  'admin@farmintel.com': {
+    name: 'Surya Rao',
+    role: 'Admin',
+    email: 'admin@farmintel.com',
+  },
+};
+
+// --- React Components ---
+
+/**
+ * Main App Component
+ * Manages login state and renders either LoginScreen or Dashboard
+ */
+export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+
+  const handleLogin = (email) => {
+    const foundUser = mockUsers[email];
+    if (foundUser) {
+      setUser(foundUser);
+      setIsLoggedIn(true);
+    } else {
+      alert('User not found. Try "farmer@farmintel.com", "agronomist@farmintel.com", or "admin@farmintel.com"');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setUser(null);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white font-inter">
+      {!isLoggedIn ? (
+        <LoginScreen onLogin={handleLogin} />
+      ) : (
+        <Dashboard user={user} onLogout={handleLogout} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Login Screen Component
+ * Simulates the "User Roles & Authentication" requirement
+ */
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = useState('farmer@farmintel.com');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onLogin(email);
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-500 to-blue-600">
+      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl">
+        <div className="text-center">
+          <Tractor className="w-16 h-16 mx-auto text-green-600 dark:text-green-400" />
+          <h1 className="mt-4 text-3xl font-bold text-gray-900 dark:text-white">
+            FarmIntel
+          </h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            AI-Powered Precision Agriculture
+          </p>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              Email address
+            </label>
+            <div className="mt-1">
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm appearance-none placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-500"
+                placeholder="you@company.com"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              Password
+            </label>
+            <div className="mt-1">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                defaultValue="password" // Mock password
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm appearance-none placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-500"
+              />
+            </div>
+          </div>
+          
+          <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+            Test users: 'farmer@farmintel.com', 'agronomist@farmintel.com', 'admin@farmintel.com' (password is 'password')
+          </p>
+
+          <div>
+            <button
+              type="submit"
+              className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150"
+            >
+              Sign in
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Main Dashboard Layout
+ * This is the main view after logging in.
+ */
+function Dashboard({ user, onLogout }) {
+  const [selectedPlot, setSelectedPlot] = useState(mockPlots[0]);
+  
+  // Agronomist can see all farms, Farmer only their own. We'll simulate this by just showing all plots.
+  // An Admin would see a different dashboard, e.g., "User Management"
+  if (user.role === 'Admin') {
+    return <AdminDashboard user={user} onLogout={onLogout} />;
+  }
+
+  return (
+    <div className="flex h-screen">
+      <Sidebar onLogout={onLogout} user={user} />
+      <main className="flex-1 p-6 overflow-y-auto bg-gray-100 dark:bg-gray-900">
+        <Header user={user} />
+
+        {/* Critical Alerts section from FRs */}
+        <CriticalAlerts alerts={mockAlerts} />
+
+        {/* Main content grid */}
+        <div className="grid grid-cols-1 gap-6 mt-6 lg:grid-cols-3">
+          {/* Left Column: Heatmap and Weather */}
+          <div className="flex flex-col col-span-1 gap-6">
+            {/* Farm Plot Heatmap from FRs */}
+            <FarmHeatmap 
+              plots={mockPlots} 
+              onSelectPlot={setSelectedPlot}
+              selectedPlot={selectedPlot}
+            />
+            <WeatherWidget weather={mockWeather} />
+          </div>
+
+          {/* Right Column: Sensor Data and AI Recs */}
+          <div className="flex flex-col col-span-1 gap-6 lg:col-span-2">
+            {/* Historical Data Charts from FRs */}
+            <SensorDataChart
+              plot={selectedPlot}
+              data={mockSensorHistory[selectedPlot.name]}
+            />
+            {/* AI Recommendation Engine from FRs */}
+            <AiRecommendations recommendations={mockRecommendations} />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/**
+ * A special dashboard for the 'Admin' role
+ */
+function AdminDashboard({ user, onLogout }) {
+  return (
+    <div className="flex h-screen">
+      <Sidebar onLogout={onLogout} user={user} />
+      <main className="flex-1 p-6 overflow-y-auto bg-gray-100 dark:bg-gray-900">
+        <Header user={user} />
+        <div className="p-6 mt-6 bg-white rounded-lg shadow dark:bg-gray-800">
+          <h2 className="mb-4 text-2xl font-semibold">Admin Panel: User Management</h2>
+          <p className="mb-6 text-gray-600 dark:text-gray-400">
+            This panel would allow Admins to manage user accounts and system settings,
+            as per the functional requirements.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-300">Name</th>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-300">Email</th>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-300">Role</th>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-right text-gray-500 uppercase dark:text-gray-300">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+                {Object.values(mockUsers).map((u) => (
+                  <tr key={u.email}>
+                    <td className="px-6 py-4 whitespace-nowrap">{u.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{u.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        u.role === 'Admin' ? 'bg-red-100 text-red-800' :
+                        u.role === 'Agronomist' ? 'bg-blue-100 text-blue-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
+                      <a href="#" className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Edit</a>
+                      <a href="#" className="ml-4 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">Delete</a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+
+/**
+ * Sidebar Navigation
+ */
+function Sidebar({ onLogout, user }) {
+  const navItems = [
+    { name: 'Dashboard', icon: LayoutDashboard },
+    { name: 'My Farm', icon: Map },
+    { name: 'Sensors', icon: Thermometer },
+    { name: 'AI Insights', icon: Brain },
+    { name: 'Alerts', icon: Bell },
+  ];
+  
+  if (user.role === 'Agronomist') {
+    navItems.splice(1, 1, { name: 'Manage Farms', icon: Tractor });
+  }
+  if (user.role === 'Admin') {
+    navItems.splice(0, navItems.length, { name: 'User Management', icon: User });
+  }
+
+  return (
+    <nav className="flex flex-col justify-between w-20 p-4 bg-white dark:bg-gray-800 shadow-lg lg:w-64">
+      <div>
+        <div className="flex items-center justify-center gap-2 mb-10 lg:justify-start">
+          <Tractor className="w-10 h-10 text-green-600 dark:text-green-400" />
+          <span className="hidden text-2xl font-bold lg:inline">FarmIntel</span>
+        </div>
+        <ul className="space-y-3">
+          {navItems.map((item, index) => (
+            <li key={item.name}>
+              <a
+                href="#"
+                className={`flex items-center justify-center p-3 rounded-lg lg:justify-start lg:gap-3 transition duration-150 ${
+                  index === 0
+                    ? 'bg-green-100 dark:bg-green-800 text-green-700 dark:text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                <item.icon className="w-6 h-6" />
+                <span className="hidden font-medium lg:inline">{item.name}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="border-t dark:border-gray-700 pt-4">
+        <a
+          href="#"
+          onClick={onLogout}
+          className="flex items-center justify-center p-3 rounded-lg lg:justify-start lg:gap-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-150"
+        >
+          <Power className="w-6 h-6" />
+          <span className="hidden font-medium lg:inline">Logout</span>
+        </a>
+      </div>
+    </nav>
+  );
+}
+
+/**
+ * Header Component
+ */
+function Header({ user }) {
+  return (
+    <header className="flex items-center justify-between pb-4 border-b dark:border-gray-700">
+      <div>
+        <h1 className="text-3xl font-bold">
+          Welcome, {user.name.split(' ')[0]}!
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Here is your farm's overview for today.
+        </p>
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="text-right">
+          <span className="font-semibold">{user.name}</span>
+          <span className="block text-sm text-gray-500 dark:text-gray-400">{user.role}</span>
+        </div>
+        <img
+          className="w-12 h-12 rounded-full"
+          src={`https://placehold.co/100x100/E2E8F0/333333?text=${user.name[0]}`}
+          alt="User avatar"
+        />
+      </div>
+    </header>
+  );
+}
+
+/**
+ * Critical Alerts Component
+ * Renders alerts from FR 6.
+ */
+function CriticalAlerts({ alerts }) {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {alerts.map((alert) => (
+        <div
+          key={alert.id}
+          className="flex items-start p-4 bg-red-100 border-l-4 border-red-500 rounded-lg shadow dark:bg-red-900"
+        >
+          <ShieldAlert className="w-6 h-6 mr-4 text-red-700 dark:text-red-300" />
+          <div>
+            <h3 className="font-bold text-red-800 dark:text-red-200">{alert.title} - {alert.plot}</h3>
+            <p className="text-sm text-red-700 dark:text-red-300">
+              {alert.message} ({alert.time})
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Farm Heatmap Component
+ * Renders FR 4: "Render a visual heatmap of the farm plots"
+ */
+function FarmHeatmap({ plots, onSelectPlot, selectedPlot }) {
+  // Helper to get color based on moisture
+  const getMoistureColor = (moisture) => {
+    if (moisture < 0.3) return 'bg-red-500 hover:bg-red-600'; // Critical
+    if (moisture < 0.5) return 'bg-yellow-500 hover:bg-yellow-600'; // Warning
+    return 'bg-green-500 hover:bg-green-600'; // Good
+  };
+
+  return (
+    <div className="p-6 bg-white rounded-lg shadow dark:bg-gray-800">
+      <h2 className="mb-4 text-xl font-semibold">Farm Plot Heatmap (by Moisture)</h2>
+      <div className="grid grid-cols-2 gap-4">
+        {plots.map((plot) => (
+          <button
+            key={plot.id}
+            onClick={() => onSelectPlot(plot)}
+            className={`p-4 rounded-lg text-white font-bold transition duration-150 ${getMoistureColor(plot.moisture)} ${
+              selectedPlot.id === plot.id ? 'ring-4 ring-blue-500' : ''
+            }`}
+          >
+            <div className="text-lg">{plot.name}</div>
+            <div className="text-sm opacity-90">{plot.crop}</div>
+            <div className="mt-2 text-2xl">{(plot.moisture * 100).toFixed(0)}%</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Weather Widget
+ * Simulates data from "external weather APIs"
+ */
+function WeatherWidget({ weather }) {
+  return (
+    <div className="p-6 bg-white rounded-lg shadow dark:bg-gray-800">
+      <h2 className="mb-4 text-xl font-semibold">Weather Forecast</h2>
+      <div className="flex items-center justify-between gap-4 p-4 mb-4 rounded-lg bg-blue-50 dark:bg-blue-900">
+        <div>
+          <div className="text-gray-500 dark:text-gray-400">Now</div>
+          <div className="text-4xl font-bold">{weather.current.temp}°C</div>
+          <div className="text-gray-600 dark:text-gray-300">{weather.current.condition}</div>
+        </div>
+        <div className="text-blue-500 dark:text-blue-300">
+          {React.cloneElement(weather.current.icon, { className: "w-16 h-16" })}
+        </div>
+      </div>
+      <div className="flex justify-between gap-2">
+        {weather.forecast.map((day) => (
+          <div key={day.day} className="flex-1 p-3 text-center rounded-lg bg-gray-100 dark:bg-gray-700">
+            <div className="font-semibold">{day.day}</div>
+            <div className="my-1 text-gray-500 dark:text-gray-300">
+              {React.cloneElement(day.icon, { className: "w-8 h-8 mx-auto" })}
+            </div>
+            <div className="font-bold">{day.temp}°C</div>
+            <div className="text-xs text-blue-500 dark:text-blue-400">{day.rain}% rain</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+/**
+ * Sensor Data Chart Component
+ * Renders FR 4: "Provide historical data charts (line graphs)"
+ */
+function SensorDataChart({ plot, data }) {
+  return (
+    <div className="p-6 bg-white rounded-lg shadow dark:bg-gray-800 h-96">
+      <h2 className="mb-4 text-xl font-semibold">
+        Sensor History: {plot.name}
+      </h2>
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={data}
+          margin={{ top: 5, right: 30, left: 0, bottom: 40 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+          <XAxis dataKey="time" />
+          <YAxis yAxisId="left" label={{ value: 'Moisture (%)', angle: -90, position: 'insideLeft' }} />
+          <YAxis yAxisId="right" orientation="right" label={{ value: 'Temp (°C)', angle: 90, position: 'insideRight' }} />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'rgba(30, 41, 59, 0.8)', // bg-slate-800 with opacity
+              borderColor: '#334155', // border-slate-700
+              borderRadius: '0.5rem', // rounded-lg
+            }}
+            labelStyle={{ color: '#f1f5f9' }} // text-slate-100
+            itemStyle={{ color: '#cbd5e1' }} // text-slate-300
+          />
+          <Legend />
+          <Line
+            yAxisId="left"
+            type="monotone"
+            dataKey="moisture"
+            stroke="#3b82f6" // blue-500
+            strokeWidth={2}
+            activeDot={{ r: 8 }}
+          />
+          <Line
+            yAxisId="right"
+            type="monotone"
+            dataKey="temp"
+            stroke="#ef4444" // red-500
+            strokeWidth={2}
+          />
+          <Line
+            yAxisId="right"
+            type="monotone"
+            dataKey="npk"
+            stroke="#22c55e" // green-500
+            strokeWidth={2}
+            hide // Hide NPK by default to avoid clutter
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/**
+ * AI Recommendations Component
+ * Renders FR 5: "The system must generate daily recommendations"
+ */
+function AiRecommendations({ recommendations }) {
+  const getIcon = (type) => {
+    switch (type) {
+      case 'irrigation':
+        return <Droplet className="w-6 h-6 text-blue-500" />;
+      case 'nutrient':
+        return <Sprout className="w-6 h-6 text-green-500" />;
+      default:
+        return <Combine className="w-6 h-6 text-gray-500" />;
+    }
+  };
+
+  return (
+    <div className="p-6 bg-white rounded-lg shadow dark:bg-gray-800">
+      <h2 className="mb-4 text-xl font-semibold">AI Recommendations</h2>
+      <div className="space-y-4">
+        {recommendations.map((rec) => (
+          <div key={rec.id} className="flex items-start gap-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-700">
+            <div>{getIcon(rec.type)}</div>
+            <div>
+              <h3 className="font-semibold">{rec.title} - {rec.plot}</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {rec.message}
+              </p>
+            </div>
+            <button className="px-3 py-1 ml-auto text-sm font-medium text-white bg-green-600 rounded-full hover:bg-green-700">
+              Apply
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
